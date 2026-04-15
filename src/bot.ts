@@ -28,6 +28,7 @@ import {
   PROTECTED_ENV_VARS,
   DAILY_COST_BUDGET,
   HOURLY_TOKEN_BUDGET,
+  MEMORY_NOTIFY,
   PROJECT_ROOT,
 } from './config.js';
 import { clearSession, getRecentConversation, getRecentMemories, getRecentTaskOutputs, getSession, getSessionConversation, logToHiveMind, pinMemory, unpinMemory, setSession, lookupWaChatId, saveWaMessageMap, saveTokenUsage, saveCompactionEvent, getCompactionCount } from './db.js';
@@ -838,7 +839,7 @@ export function createBot(): Bot {
   // Register callback for high-importance memory notifications.
   // When a memory with importance >= 0.8 is created, notify via Telegram
   // so the user can /pin it if it should be permanent.
-  if (ALLOWED_CHAT_ID) {
+  if (ALLOWED_CHAT_ID && MEMORY_NOTIFY) {
     setHighImportanceCallback((memoryId, summary, importance) => {
       const msg = `🧠 New memory #${memoryId} [${importance.toFixed(1)}]: ${summary.slice(0, 200)}\n\n/pin ${memoryId} to make permanent`;
       bot.api.sendMessage(ALLOWED_CHAT_ID, msg).catch(() => {});
