@@ -1,6 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 import { logger } from './logger.js';
 
@@ -18,12 +19,21 @@ export interface SkillMeta {
 
 const skills: Map<string, SkillMeta> = new Map();
 
+function getHomeDirectory(): string {
+  return process.env.HOME || process.env.USERPROFILE || os.homedir();
+}
+
 // ── Frontmatter parsing ─────────────────────────────────────────────
 
 interface Frontmatter {
   name?: string;
   description?: string;
   triggers?: string[];
+}
+
+export interface SkillRegistryOptions {
+  projectSkillsDir?: string;
+  globalSkillsDir?: string;
 }
 
 function parseFrontmatter(content: string): { frontmatter: Frontmatter; body: string } {
@@ -196,19 +206,20 @@ function scanDirectory(dir: string): void {
  * Scan skills/ (relative to project root) and ~/.claude/skills/ to
  * populate the registry. Safe to call multiple times; clears previous state.
  */
-export function initSkillRegistry(): void {
+export function initSkillRegistry(options: SkillRegistryOptions = {}): void {
   skills.clear();
 
   // Find project root by walking up from this file looking for CLAUDE.md
-  let projectRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+  const currentFilePath = fileURLToPath(import.meta.url);
+  const projectRoot = path.resolve(path.dirname(currentFilePath), '..');
   // Fallback: look for CLAUDE.md to confirm
   if (!fs.existsSync(path.join(projectRoot, 'CLAUDE.md'))) {
     // Already at a reasonable default, just continue
     logger.debug({ projectRoot }, 'CLAUDE.md not found at expected project root');
   }
 
-  const projectSkillsDir = path.join(projectRoot, 'skills');
-  const globalSkillsDir = path.join(os.homedir(), '.claude', 'skills');
+  const projectSkillsDir = options.projectSkillsDir ?? path.join(projectRoot, 'skills');
+  const globalSkillsDir = options.globalSkillsDir ?? path.join(getHomeDirectory(), '.claude', 'skills');
 
   // Scan project skills first (they take priority)
   scanDirectory(projectSkillsDir);
