@@ -1,13 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { _initTestDatabase, getAllScheduledTasks } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLI_PATH = path.resolve(__dirname, '..', 'dist', 'schedule-cli.js');
 const PROJECT_DIR = path.resolve(__dirname, '..');
+const TEST_DB_ENCRYPTION_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+function withTestEnv(overrides: Record<string, string | undefined> = {}): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    DB_ENCRYPTION_KEY: TEST_DB_ENCRYPTION_KEY,
+    ...overrides,
+  };
+}
 
 describe('schedule-cli agent routing', () => {
   // These tests run the actual CLI as a child process to verify env var behavior
@@ -15,7 +23,7 @@ describe('schedule-cli agent routing', () => {
   it('auto-detects agent from CLAUDECLAW_AGENT_ID env var', () => {
     const result = createAndTrack(
       `node "${CLI_PATH}" create "test auto-detect" "0 9 * * *"`,
-      { ...process.env, CLAUDECLAW_AGENT_ID: 'comms' },
+      withTestEnv({ CLAUDECLAW_AGENT_ID: 'comms' }),
     );
 
     expect(result).toContain('Agent:        comms');
@@ -24,7 +32,7 @@ describe('schedule-cli agent routing', () => {
   it('--agent flag overrides CLAUDECLAW_AGENT_ID env var', () => {
     const result = createAndTrack(
       `node "${CLI_PATH}" create "test override" "0 9 * * *" --agent ops`,
-      { ...process.env, CLAUDECLAW_AGENT_ID: 'comms' },
+      withTestEnv({ CLAUDECLAW_AGENT_ID: 'comms' }),
     );
 
     expect(result).toContain('Agent:        ops');
@@ -33,7 +41,7 @@ describe('schedule-cli agent routing', () => {
   it('defaults to main when no env var and no --agent flag', () => {
     const result = createAndTrack(
       `node "${CLI_PATH}" create "test default" "0 9 * * *"`,
-      { ...process.env, CLAUDECLAW_AGENT_ID: undefined },
+      withTestEnv({ CLAUDECLAW_AGENT_ID: undefined }),
     );
 
     expect(result).toContain('Agent:        main');
@@ -54,7 +62,7 @@ describe('schedule-cli agent routing', () => {
     // Only delete tasks we created, not pre-existing ones
     for (const id of createdTaskIds) {
       try {
-        execSync(`node "${CLI_PATH}" delete ${id}`, { cwd: PROJECT_DIR });
+        execSync(`node "${CLI_PATH}" delete ${id}`, { cwd: PROJECT_DIR, env: withTestEnv() });
       } catch {
         // ignore if already gone
       }
