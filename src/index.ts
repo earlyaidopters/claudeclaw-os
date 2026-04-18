@@ -45,15 +45,17 @@ if (AGENT_ID !== 'main') {
   });
   logger.info({ agentId: AGENT_ID, name: agentConfig.name }, 'Running as agent');
 } else {
-  // For main bot: read CLAUDE.md from CLAUDECLAW_CONFIG and inject it as
-  // systemPrompt — the same pattern used by sub-agents. Never copy the file
-  // into the repo; that defeats the purpose of CLAUDECLAW_CONFIG and risks
-  // accidentally committing personal config.
-  const externalClaudeMd = path.join(CLAUDECLAW_CONFIG, 'CLAUDE.md');
-  if (fs.existsSync(externalClaudeMd)) {
+  // For main bot: load CLAUDE.md from CLAUDECLAW_CONFIG/agents/main/ (same
+  // pattern as sub-agents). Falls back to CLAUDECLAW_CONFIG/CLAUDE.md for
+  // backward compatibility with setups that only have a root-level file.
+  const agentClaudeMd = resolveAgentClaudeMd('main');
+  const rootClaudeMd = path.join(CLAUDECLAW_CONFIG, 'CLAUDE.md');
+  const claudeMdSource = agentClaudeMd ?? (fs.existsSync(rootClaudeMd) ? rootClaudeMd : null);
+
+  if (claudeMdSource) {
     let systemPrompt: string | undefined;
     try {
-      systemPrompt = fs.readFileSync(externalClaudeMd, 'utf-8');
+      systemPrompt = fs.readFileSync(claudeMdSource, 'utf-8');
     } catch { /* unreadable */ }
     if (systemPrompt) {
       setAgentOverrides({
@@ -62,11 +64,11 @@ if (AGENT_ID !== 'main') {
         cwd: PROJECT_ROOT,
         systemPrompt,
       });
-      logger.info({ source: externalClaudeMd }, 'Loaded CLAUDE.md from CLAUDECLAW_CONFIG');
+      logger.info({ source: claudeMdSource }, 'Loaded CLAUDE.md from CLAUDECLAW_CONFIG');
     }
   } else if (!fs.existsSync(path.join(PROJECT_ROOT, 'CLAUDE.md'))) {
     logger.warn(
-      'No CLAUDE.md found. Copy CLAUDE.md.example to %s/CLAUDE.md and customize it.',
+      'No CLAUDE.md found. Copy CLAUDE.md.example to %s/agents/main/CLAUDE.md and customize it.',
       CLAUDECLAW_CONFIG,
     );
   }
@@ -192,10 +194,12 @@ async function main(): Promise<void> {
         const ids = ['main', ...listAgentIds().filter((id) => id !== 'main')];
         const roster = ids.map((id) => {
           try {
-            if (id === 'main') return { id: 'main', name: 'Main', description: 'General ops and triage' };
             const cfg = loadAgentConfig(id);
             return { id, name: cfg.name || id, description: cfg.description || '' };
-          } catch { return { id, name: id, description: '' }; }
+          } catch {
+            const fallbackName = id.charAt(0).toUpperCase() + id.slice(1);
+            return { id, name: fallbackName, description: '' };
+          }
         });
         fs.writeFileSync('/tmp/warroom-agents.json', JSON.stringify(roster, null, 2));
       } catch (err) {

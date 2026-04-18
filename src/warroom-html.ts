@@ -704,7 +704,7 @@ export function getWarRoomHtml(token: string, chatId: string, warroomPort: numbe
     <div class="table-surface"></div>
     <div class="table-rim"></div>
     <div class="stage-avatar" data-agent="main" style="--seat-x:0px;--seat-y:-150px">
-      <img src="/warroom-avatar/main?token=${safeToken}" alt="Main">
+      <img src="/warroom-avatar/main?token=${safeToken}" alt="Main agent">
       <div class="stage-nameplate">MAIN</div>
     </div>
     <div class="stage-avatar" data-agent="research" style="--seat-x:-250px;--seat-y:-40px">
@@ -1297,7 +1297,7 @@ async function togglePin(agentId) {
     // 1. Optimistic UI update
     pinnedAgent = targetAgent;
     _renderPin();
-    var statusLabel = targetAgent ? (AGENT_LABELS[targetAgent] || targetAgent) : 'Main';
+    var statusLabel = targetAgent ? (AGENT_LABELS[targetAgent] || targetAgent) : (AGENT_LABELS['main'] || 'Main');
     addTranscriptEntry('system', 'Switching to ' + statusLabel + '...');
     document.getElementById('statusText').textContent = 'switching to ' + statusLabel + '...';
 
@@ -1456,6 +1456,9 @@ var AGENT_LABELS = AGENT_LABELS || {};
       data.agents.forEach(function(agent) {
         var role = AGENT_ROLES[agent.id] || agent.description || 'Specialist';
         AGENT_LABELS[agent.id] = agent.name || agent.id;
+        // Update stage nameplate if the intro animation is still visible
+        var stageEl = document.querySelector('.stage-avatar[data-agent="' + agent.id + '"] .stage-nameplate');
+        if (stageEl) stageEl.textContent = (agent.name || agent.id).toUpperCase();
         var card = document.createElement('div');
         card.className = 'agent-card';
         card.id = 'agent-' + agent.id;
@@ -1624,7 +1627,7 @@ window.addEventListener('beforeunload', __warRoomCleanup);
 async function toggleMeeting() {
   var btn = document.getElementById('meetingBtn');
   if (!meetingActive) {
-    var agentLabel = pinnedAgent ? (AGENT_LABELS[pinnedAgent] || pinnedAgent) : 'Main';
+    var agentLabel = pinnedAgent ? (AGENT_LABELS[pinnedAgent] || pinnedAgent) : (AGENT_LABELS['main'] || 'Main');
     btn.textContent = 'Setting up ' + agentLabel + '...';
     btn.disabled = true;
     btn.className = 'btn';
