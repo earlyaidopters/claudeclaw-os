@@ -186,6 +186,22 @@ export async function runAgent(
   const secrets = readEnvFile(['CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY']);
 
   const sdkEnv: Record<string, string | undefined> = { ...process.env };
+
+  // Strip env vars set by a wrapping Claude Code session (e.g. when PM2 is
+  // started from inside a `claude` terminal). The nested subprocess inherits
+  // these and immediately exits with code 1 thinking it's a nested instance.
+  for (const key of [
+    'CLAUDECODE',
+    'CLAUDE_CODE_ENTRYPOINT',
+    'CLAUDE_CODE_EXECPATH',
+    'CLAUDE_CODE_SSE_PORT',
+    'CLAUDE_CODE_IPC_PORT',
+    'CLAUDE_CODE_MAX_OUTPUT_TOKENS',
+    'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS',
+  ]) {
+    delete sdkEnv[key];
+  }
+
   if (secrets.CLAUDE_CODE_OAUTH_TOKEN) {
     sdkEnv.CLAUDE_CODE_OAUTH_TOKEN = secrets.CLAUDE_CODE_OAUTH_TOKEN;
   }
