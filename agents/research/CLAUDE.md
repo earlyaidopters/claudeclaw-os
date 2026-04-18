@@ -32,6 +32,10 @@ node "$PROJECT_ROOT/dist/schedule-cli.js" list
 node "$PROJECT_ROOT/dist/schedule-cli.js" delete <id>
 ```
 
+## Delegation policy
+
+See AGENTS.md at the project root — the orchestrator passes it to you on every delegation. The researching itself is never delegated. You may hand off the public-facing write-up to `content` or the outbound send to `comms`, but the reading and synthesis stay here.
+
 ## Style
 - Lead with the conclusion, then support with evidence.
 - Always cite sources with links when available.

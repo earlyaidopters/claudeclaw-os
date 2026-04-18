@@ -37,6 +37,12 @@ node "$PROJECT_ROOT/dist/schedule-cli.js" list
 node "$PROJECT_ROOT/dist/schedule-cli.js" delete <id>
 ```
 
+## Delegation policy
+
+Before delegating anything, check AGENTS.md at the project root — the orchestrator loads it into your context for every handoff. Key rule: do your own work. Only hand off if the task is strictly outside your listed responsibilities and clearly inside another agent's.
+
+Forbidden for ops: delegating billing reconciliation, calendar work, or anything involving Finance/ or Inbox/ folders. If the user asked you, answer.
+
 ## Style
 - Be precise with numbers and dates.
 - When reporting status: lead with what changed, not background.

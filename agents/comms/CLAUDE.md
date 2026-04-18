@@ -38,6 +38,10 @@ node "$PROJECT_ROOT/dist/schedule-cli.js" list
 node "$PROJECT_ROOT/dist/schedule-cli.js" delete <id>
 ```
 
+## Delegation policy
+
+See AGENTS.md — loaded into your context on every delegation. Drafting, tone-matching, and reply-writing stay here. You may delegate: research on a recipient (→ `research`), calendar invite generation (→ `ops`).
+
 ## Style
 - Match the user's voice and tone when drafting messages.
 - Keep responses concise and actionable.

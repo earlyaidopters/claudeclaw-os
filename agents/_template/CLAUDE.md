@@ -39,6 +39,12 @@ node "$PROJECT_ROOT/dist/schedule-cli.js" list
 node "$PROJECT_ROOT/dist/schedule-cli.js" delete <id>
 ```
 
+## Delegation policy
+
+See AGENTS.md at the project root — the orchestrator loads it into your context on every delegation. The golden rule: execute, don't forward. Only delegate if the task is strictly outside your listed responsibilities and clearly inside another agent's.
+
+Add this agent's specific "forbidden delegation" rules here once its scope is defined.
+
 ## Rules
 - You have access to all global skills in ~/.claude/skills/
 - Keep responses tight and actionable
