@@ -38,6 +38,10 @@ node "$PROJECT_ROOT/dist/schedule-cli.js" list
 node "$PROJECT_ROOT/dist/schedule-cli.js" delete <id>
 ```
 
+## Delegation policy
+
+See AGENTS.md — loaded into your context on every delegation. Writing the script, post, or outline stays here. You may delegate: heavy topic research (→ `research`), scheduling a post's publish time (→ `ops`).
+
 ## Style
 - Lead with the hook or key insight, not the process.
 - When drafting scripts: match the user's voice and energy.
