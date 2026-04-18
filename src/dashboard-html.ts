@@ -255,7 +255,7 @@ ${WARROOM_ENABLED ? `<div class="card" style="border:1px solid #1e3a5f">
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <select id="meet-agent-select" style="background:#0a0a0a;color:#fff;border:1px solid #2a2a2a;border-radius:6px;padding:6px 10px;font-size:12px;min-width:110px">
-        <option value="main">Main</option>
+        <option value="main">Loading...</option>
       </select>
       <input type="text" id="meet-url-input" placeholder="Paste Meet URL, or leave empty to auto-read clipboard"
         style="flex:1;min-width:220px;background:#0a0a0a;color:#fff;border:1px solid #2a2a2a;border-radius:6px;padding:6px 10px;font-size:12px;font-family:ui-monospace,monospace">
@@ -276,7 +276,7 @@ ${WARROOM_ENABLED ? `<div class="card" style="border:1px solid #1e3a5f">
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <select id="meet-voice-agent-select" style="background:#0a0a0a;color:#fff;border:1px solid #2a2a2a;border-radius:6px;padding:6px 10px;font-size:12px;min-width:110px">
-        <option value="main">Main</option>
+        <option value="main">Loading...</option>
       </select>
       <input type="text" id="meet-voice-url-input" placeholder="Paste Meet URL, or leave empty to auto-read clipboard"
         style="flex:1;min-width:220px;background:#0a0a0a;color:#fff;border:1px solid #2a2a2a;border-radius:6px;padding:6px 10px;font-size:12px;font-family:ui-monospace,monospace">
@@ -297,7 +297,7 @@ ${WARROOM_ENABLED ? `<div class="card" style="border:1px solid #1e3a5f">
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <select id="meet-daily-agent-select" style="background:#0a0a0a;color:#fff;border:1px solid #2a2a2a;border-radius:6px;padding:6px 10px;font-size:12px;min-width:110px">
-        <option value="main">Main</option>
+        <option value="main">Loading...</option>
       </select>
       <select id="meet-daily-mode-select" style="background:#0a0a0a;color:#fff;border:1px solid #2a2a2a;border-radius:6px;padding:6px 10px;font-size:12px;min-width:100px">
         <option value="direct">Direct</option>
@@ -866,7 +866,7 @@ async function loadTasks() {
     }
     c.innerHTML = data.tasks.map(t => {
       const statusCls = t.status === 'running' ? 'pill-running' : t.status === 'active' ? 'pill-active' : 'pill-paused';
-      const agentBadge = t.agent_id && t.agent_id !== 'main' ? '<span class="text-xs text-gray-500 ml-2">[' + t.agent_id + ']</span>' : '';
+      const agentBadge = t.agent_id && t.agent_id !== 'main' ? '<span class="text-xs text-gray-500 ml-2">[' + resolveAgentName(t.agent_id) + ']</span>' : '';
       const lastStatusIcon = t.last_status === 'success' ? '<span class="last-success" title="Last run succeeded">&#10003;</span> ' : t.last_status === 'failed' ? '<span class="last-failed" title="Last run failed">&#10007;</span> ' : t.last_status === 'timeout' ? '<span class="last-timeout" title="Last run timed out">&#9200;</span> ' : '';
       const lastResult = t.last_result ? '<details class="mt-2"><summary class="text-xs text-gray-500">' + lastStatusIcon + 'Last result</summary><pre class="text-xs text-gray-400 mt-1 whitespace-pre-wrap break-words">' + escapeHtml(t.last_result) + '</pre></details>' : '';
       const runningInfo = t.status === 'running' && t.started_at ? '<span class="text-xs text-blue-400 ml-2">running for ' + elapsed(t.started_at) + '</span>' : '';
@@ -1239,14 +1239,14 @@ async function loadMeetAgentOptions() {
   if (!selAvatar && !selVoice && !selDaily) return;
   try {
     const data = await api('/api/agents');
-    const ids = new Set(['main']);
+    var agentMap = {};
+    agentMap['main'] = 'Main';
     if (data && Array.isArray(data.agents)) {
-      for (const a of data.agents) if (a && a.id) ids.add(a.id);
+      for (const a of data.agents) if (a && a.id) agentMap[a.id] = a.name || (a.id.charAt(0).toUpperCase() + a.id.slice(1));
     }
-    const sorted = ['main', ...[...ids].filter(function(x){ return x !== 'main'; }).sort()];
+    var sorted = ['main', ...Object.keys(agentMap).filter(function(x){ return x !== 'main'; }).sort()];
     const optionsHtml = sorted.map(function(id) {
-      const label = id.charAt(0).toUpperCase() + id.slice(1);
-      return '<option value="' + id + '">' + label + '</option>';
+      return '<option value="' + id + '">' + (agentMap[id] || id) + '</option>';
     }).join('');
     if (selAvatar) selAvatar.innerHTML = optionsHtml;
     if (selVoice) selVoice.innerHTML = optionsHtml;
@@ -1548,7 +1548,7 @@ async function refreshMeetSessions() {
       meta.style.cssText = 'min-width:0;flex:1';
       const title = document.createElement('div');
       title.style.cssText = 'font-size:12px;color:#fff;font-weight:600';
-      const agentLabel = (s.agent_id || '').charAt(0).toUpperCase() + (s.agent_id || '').slice(1);
+      const agentLabel = resolveAgentName(s.agent_id || 'main');
       title.textContent = agentLabel + ' · ' + (s.status === 'live' ? 'live' : s.status);
       const sub = document.createElement('div');
       sub.style.cssText = 'font-size:10px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
@@ -1581,6 +1581,10 @@ const AGENT_COLORS = { main: '#4f46e5', comms: '#0ea5e9', content: '#f59e0b', op
 async function loadAgents() {
   try {
     const data = await api('/api/agents');
+    // Populate global name lookup cache
+    if (data && Array.isArray(data.agents)) {
+      data.agents.forEach(function(a) { if (a && a.id && a.name) agentNameMap[a.id] = a.name; });
+    }
     const section = document.getElementById('agents-section');
     const container = document.getElementById('agents-container');
     // Always show agents section so "+ New Agent" button is accessible
@@ -2115,7 +2119,7 @@ async function loadHiveMind() {
       const blurClass = isBlurred ? 'privacy-blur' : '';
       return '<tr>' +
         '<td class="col-time">' + time + '</td>' +
-        '<td class="col-agent" style="color:' + color + '">' + e.agent_id + '</td>' +
+        '<td class="col-agent" style="color:' + color + '">' + resolveAgentName(e.agent_id) + '</td>' +
         '<td class="col-action">' + escapeHtml(e.action) + '</td>' +
         '<td><div class="col-summary ' + blurClass + '" data-section="hive" data-idx="' + i + '" onclick="toggleItemBlur(this)">' + escapeHtml(e.summary) + '</div></td>' +
       '</tr>';
@@ -2186,6 +2190,15 @@ async function loadSummary() {
 // ── Mission Control ──────────────────────────────────────────────────
 
 let missionAgentsList = [];
+
+// Global lookup cache: agent_id -> display name (populated by loadAgents / loadMissionControl)
+var agentNameMap = {};
+function resolveAgentName(id) {
+  if (agentNameMap[id]) return agentNameMap[id];
+  var a = missionAgentsList.find(function(x){ return x.id === id; });
+  if (a && a.name) { agentNameMap[id] = a.name; return a.name; }
+  return id.charAt(0).toUpperCase() + id.slice(1);
+}
 
 async function loadMissionControl() {
   try {
@@ -2614,7 +2627,7 @@ async function loadAgentTabs() {
       const dot = document.createElement('span');
       dot.className = 'agent-dot ' + (a.running ? 'live' : 'dead');
       tab.appendChild(dot);
-      tab.appendChild(document.createTextNode(a.id.charAt(0).toUpperCase() + a.id.slice(1)));
+      tab.appendChild(document.createTextNode(a.name || (a.id.charAt(0).toUpperCase() + a.id.slice(1))));
       tab.onclick = function() { switchAgentTab(a.id, this); };
       container.appendChild(tab);
     });
